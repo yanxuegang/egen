@@ -1,0 +1,22 @@
+{{- define "insert"}}
+func (dao *{{.GoName}}GenDAO) Insert(ctx context.Context, vals ...*{{.PkgName}}{{.GoName}}) (int64, error) {
+	if len(vals) == 0 || vals == nil {
+		return 0, nil
+	}
+	var args = make([]interface{}, 0, len(vals)*({{len .Fields}}))
+	var str = ""
+	for k, v := range vals {
+		if k != 0 {
+			str += ", "
+		}
+		str += "({{.InsertWithReplaceParameter}})"
+		args = append(args, {{.QuotedExecArgsWithParameter .QuotedAllCol "" "v."}})
+	}
+	sqlSen := "INSERT INTO {{.QuotedTableName}}({{.AddToString .QuotedAllCol}}) VALUES" + str
+	res, err := dao.session.ExecContext(ctx, sqlSen, args...)
+	if err != nil {
+		return 0, err
+	}
+	return res.RowsAffected()
+}
+{{- end}}

@@ -1,0 +1,48 @@
+{{- define "select"}}
+func (dao *{{.GoName}}GenDAO) NewOne(row *sql.Row) (*{{.PkgName}}{{.GoName}}, error) {
+	if err := row.Err(); err != nil {
+		return nil, err
+	}
+	var val {{.PkgName}}{{.GoName}}
+	err := row.Scan({{.QuotedExecArgsWithParameter .QuotedAllCol "&" "val." }})
+	return &val, err
+}
+
+func (dao *{{.GoName}}GenDAO) SelectByRaw(ctx context.Context, query string, args ...any) (*{{.PkgName}}{{.GoName}}, error) {
+	row := dao.session.QueryRowContext(ctx, query, args...)
+	return dao.NewOne(row)
+}
+
+func (dao *{{.GoName}}GenDAO) SelectByWhere(ctx context.Context, where string, args ...any) (*{{.PkgName}}{{.GoName}}, error) {
+	s := "SELECT {{.AddToString .QuotedAllCol}} FROM {{.QuotedTableName}} WHERE " + where
+	return dao.SelectByRaw(ctx, s, args...)
+}
+
+func (dao *{{.GoName}}GenDAO) NewBatch(rows *sql.Rows) ([]*{{.PkgName}}{{.GoName}}, error) {
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	var vals = make([]*{{.PkgName}}{{.GoName}}, 0, {{len .Fields}})
+	for rows.Next() {
+		var val {{.PkgName}}{{.GoName}}
+		if err := rows.Scan({{.QuotedExecArgsWithParameter .QuotedAllCol "&" "val." }}); err != nil {
+			return nil, err
+		}
+		vals = append(vals, &val)
+	}
+	return vals, nil
+}
+
+func (dao *{{.GoName}}GenDAO) SelectBatchByRaw(ctx context.Context, query string, args ...any) ([]*{{.PkgName}}{{.GoName}}, error) {
+	rows, err := dao.session.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	return dao.NewBatch(rows)
+}
+
+func (dao *{{.GoName}}GenDAO) SelectBatchByWhere(ctx context.Context, where string, args ...any) ([]*{{.PkgName}}{{.GoName}}, error) {
+	s := "SELECT {{.AddToString .QuotedAllCol}} FROM {{.QuotedTableName}} WHERE " + where
+	return dao.SelectBatchByRaw(ctx, s, args...)
+}
+{{- end}}
